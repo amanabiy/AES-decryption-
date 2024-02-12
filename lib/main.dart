@@ -3,6 +3,8 @@ import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:url_launcher/url_launcher.dart';
+
 
 void main() {
   runApp(MyApp());
@@ -59,9 +61,9 @@ class _MyHomePageState extends State<MyHomePage> {
     Widget page;
     switch (selectedIndex) {
       case 0:
-        page = GeneratorPage();
-      case 1:
         page = DecryptPage();
+      case 1:
+        page = AboutPage();
       default:
         throw UnimplementedError('no widget for $selectedIndex');
     }
@@ -80,8 +82,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       label: Text('Home'),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.favorite),
-                      label: Text('Favorites'),
+                      icon: Icon(Icons.info), 
+                      label: Text('About'),
                     ),
                   ],
                   selectedIndex: selectedIndex,
@@ -206,6 +208,69 @@ class BigCard extends StatelessWidget {
   }
 }
 
+class AboutPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('About'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'About This App',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'This app is a learning project aimed at implementing AES decryption in ECB and CBC modes. We developed it primarily for educational purposes, which provided us with valuable experience in researching and utilizing various resources. The contributors to this project include Amanuel Abiy, Amanuel Abebe, Aklile Seyoum, Amanuel Alehegn, and Amanuel Abel.',
+              style: TextStyle(
+                fontSize: 16,
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'To contribute, please visit our GitHub repository. You can request an issue or send a pull request.',
+              style: TextStyle(
+                fontSize: 16,
+              ),
+            ),
+            SizedBox(height: 8),
+            InkWell(
+              onTap: () {
+                launch('https://github.com/amanabiy/AES-decryption-');
+              },
+              child: Text(
+                'GitHub Repository',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            SizedBox(height: 32),
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close the AboutPage
+                },
+                child: Text('Close'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class DecryptPage extends StatefulWidget {
   const DecryptPage({super.key});
 
@@ -218,6 +283,7 @@ class _DecryptPageState extends State<DecryptPage> {
   final _decryptedTextController = TextEditingController();
   final _encryptionKeyController = TextEditingController();
   String _selectedKeyBit = 'Base64';
+  String _typeDecryption = 'ECB';
   final _ivController = TextEditingController(); // For initialization vector
 
   @override
@@ -267,18 +333,37 @@ class _DecryptPageState extends State<DecryptPage> {
                   labelText: 'Encryption Key',
                 ),
               ),
-        
               const SizedBox(height: 16),
-              TextField(
-                controller: _ivController,
-                decoration: const InputDecoration(
-                  labelText: 'Initialization Vector (IV)',
+              if (_typeDecryption != 'ECB') ...[ 
+                TextField(
+                  controller: _ivController,
+                  decoration: const InputDecoration(
+                    labelText: 'Initialization Vector (IV)',
+                  ),
                 ),
-              ),
+                const SizedBox(height: 24),
+              ],
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _decryptText,
-                child: const Text('Decrypt'),
+              Row(
+                children: [
+                  DropdownButton<String>(
+                    value: _typeDecryption,
+                    items: const [
+                      DropdownMenuItem(value: 'ECB', child: Text('ECB')),
+                      DropdownMenuItem(value: 'CBC', child: Text('CBC')),
+                    ],
+                    onChanged: (newValue) {
+                      setState(() {
+                        _typeDecryption = newValue!;
+                      });
+                    },
+                  ),
+                  SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: _decryptText,
+                    child: const Text('Decrypt'),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               TextField(
@@ -295,7 +380,8 @@ class _DecryptPageState extends State<DecryptPage> {
       ),
     );
   }
-   void _decryptText() async {
+  
+  void _decryptText() async {
     final encryptedText = _encryptedTextController.text;
     final encryptionKey = _encryptionKeyController.text;
     final ivText = _ivController.text;
@@ -307,7 +393,10 @@ class _DecryptPageState extends State<DecryptPage> {
       // const String encryptedTextBase64 = "G8hLaH0JuQz5eNaYfx9/VA=="; // decrypted equals Amanuel
       // const String keyBase64 = "YXNkZmFzZGZhc2RmYXNkZg=="; // asdfasdfasdfasdf
       // const String ivBase64 = "YXNkZmFzZGZhc2RmYXNkZg==";f
-
+      _encryptedTextController.text = "G8hLaH0JuQz5eNaYfx9/VA==";
+      _encryptionKeyController.text = "asdfasdfasdfasdf";
+      _ivController.text = "asdfasdfasdfasdf";
+      
       final keyBase64 = base64Url.encode(utf8.encode(encryptionKey));
       final ivBase64 = base64Url.encode(utf8.encode(ivText));
 
