@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:convert/convert.dart';
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/aesDecryption.dart';
 import 'package:provider/provider.dart';
-import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:url_launcher/url_launcher.dart';
 
 
@@ -127,7 +129,6 @@ class GeneratorPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          BigCard(wordPair: pair),
           SizedBox(height: 10),
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -154,59 +155,6 @@ class GeneratorPage extends StatelessWidget {
   }
 }
 
-class FavoritePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: Text('You have '
-              '${appState.favorites.length} favorites:'),
-        ),
-        for (var pair in appState.favorites)
-          ListTile(
-            leading: Icon(Icons.favorite),
-            title: Text(pair.asLowerCase),
-          ),
-      ],
-    );
-  }
-}
-
-class BigCard extends StatelessWidget {
-  const BigCard({
-    super.key,
-    required this.wordPair,
-  });
-
-  final WordPair wordPair;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context); 
-
-    final style = theme.textTheme.displaySmall!.copyWith(
-      color: theme.colorScheme.onPrimary,
-      // decorationStyle: ,
-    );
-
-    return Card(
-      color: theme.colorScheme.surfaceTint,  
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Text(
-          wordPair.asCamelCase,
-          style: style,
-          semanticsLabel: "${wordPair.first} ${wordPair.second}"
-        ),
-        
-      ),
-    );
-  }
-}
 
 class AboutPage extends StatelessWidget {
   @override
@@ -282,7 +230,7 @@ class _DecryptPageState extends State<DecryptPage> {
   final _encryptedTextController = TextEditingController();
   final _decryptedTextController = TextEditingController();
   final _encryptionKeyController = TextEditingController();
-  String _selectedKeyBit = 'Base64';
+  String _selectedKeyBit = 'HEX';
   String _typeDecryption = 'ECB';
   final _ivController = TextEditingController(); // For initialization vector
 
@@ -315,7 +263,7 @@ class _DecryptPageState extends State<DecryptPage> {
                       value: _selectedKeyBit,
                       items: const [
                         DropdownMenuItem(value: 'Base64', child: Text('Base64')),
-                        DropdownMenuItem(value: 'Hex', child: Text('Hex')),
+                        DropdownMenuItem(value: 'HEX', child: Text('HEX')),
                       ],
                       onChanged: (newValue) {
                         setState(() {
@@ -382,32 +330,39 @@ class _DecryptPageState extends State<DecryptPage> {
   }
   
   void _decryptText() async {
-    final encryptedText = _encryptedTextController.text;
     final encryptionKey = _encryptionKeyController.text;
     final ivText = _ivController.text;
     final selectedKeyBit = _selectedKeyBit;
-    print(selectedKeyBit);
-
+    final typeDecryption = _typeDecryption;
     try {
-      // Trial Data
-      // const String encryptedTextBase64 = "G8hLaH0JuQz5eNaYfx9/VA=="; // decrypted equals Amanuel
-      // const String keyBase64 = "YXNkZmFzZGZhc2RmYXNkZg=="; // asdfasdfasdfasdf
-      // const String ivBase64 = "YXNkZmFzZGZhc2RmYXNkZg==";f
-      _encryptedTextController.text = "G8hLaH0JuQz5eNaYfx9/VA==";
-      _encryptionKeyController.text = "asdfasdfasdfasdf";
-      _ivController.text = "asdfasdfasdfasdf";
-      
-      final keyBase64 = base64Url.encode(utf8.encode(encryptionKey));
-      final ivBase64 = base64Url.encode(utf8.encode(ivText));
+      final encryptedText = _encryptedTextController.text;
 
-      final key = encrypt.Key.fromBase64(keyBase64);
-      final iv = encrypt.IV.fromBase64(ivBase64);
-      final encrypter = encrypt.Encrypter(encrypt.AES(key,  mode: encrypt.AESMode.cbc));
-      final decryptedText = encrypter.decrypt64(encryptedText, iv: iv);
+      Uint8List plaintextBytes;
+      if (selectedKeyBit == "HEX")
+      {
+        plaintextBytes = Uint8List.fromList(hex.decode(encryptedText));
+      }
+      else {
+        plaintextBytes = base64Decode(encryptedText);
+      }
 
-      print("Decrypted Text: $decryptedText");
-      _decryptedTextController.text = decryptedText;
+      Uint8List keyBytes = Uint8List.fromList(utf8.encode(encryptionKey));
+      AES aes = AES(keyBytes);
 
+      Uint8List decryptedText;
+      if (typeDecryption == "ECB") {
+        decryptedText = aes.decryptEBC(plaintextBytes);
+
+      }
+      else {
+        Uint8List iv = Uint8List.fromList((utf8.encode(ivText)));
+        decryptedText = aes.decryptCBC(plaintextBytes, iv);
+      }
+
+      print("Encrypted Text: $encryptedText");
+      print("Decryption Key: $encryptionKey");
+      print("Decrypted Text: ${utf8.decode(decryptedText)}");
+      _decryptedTextController.text = utf8.decode(decryptedText);
     } catch (error) {
       _decryptedTextController.text = 'Error during decryption: $error';
       print(_decryptedTextController.text);
