@@ -189,29 +189,6 @@ class AboutPage extends StatelessWidget {
                 fontSize: 16,
               ),
             ),
-            SizedBox(height: 8),
-            InkWell(
-              onTap: () {
-                launch('https://github.com/amanabiy/AES-decryption-');
-              },
-              child: Text(
-                'GitHub Repository',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
-            SizedBox(height: 32),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close the AboutPage
-                },
-                child: Text('Close'),
-              ),
-            ),
           ],
         ),
       ),
